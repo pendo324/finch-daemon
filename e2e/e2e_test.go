@@ -11,17 +11,26 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+	"github.com/spf13/pflag"
 
 	"github.com/runfinch/finch-daemon/e2e/tests"
+	"github.com/runfinch/finch-daemon/e2e/util"
 )
 
 func TestRun(t *testing.T) {
 	if os.Getenv("TEST_E2E") != "1" {
 		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run these tests")
 	}
-	// TODO : Make this configurable
-	runtimeExe := "nerdctl"
-	opt, _ := option.New([]string{runtimeExe, "-n", "finch"})
+
+	var subject string
+	var subjectPrefix string
+	var subjectEnv []string
+	pflag.StringVar(&subject, "subject", "nerdctl", `A string which specifies which command the tests are run against, defaults to "nerdctl" in the user's PATH.`)
+	pflag.StringVar(&subjectPrefix, "subject-prefix", "", `A string which prefixes the command the tests are run against, defaults to "".`)
+	pflag.StringArrayVar(&subjectEnv, "subject-env", []string{}, "One or more environment variables to set when running the subject, in the form of strings like EXAMPLE=test")
+	pflag.Parse()
+
+	opt, _ := option.New([]string{subject, "--namespace", "finch"})
 
 	ginkgo.SynchronizedBeforeSuite(func() []byte {
 		tests.SetupLocalRegistry(opt)
@@ -33,6 +42,15 @@ func TestRun(t *testing.T) {
 		// clean up everything after the local registry is cleaned up
 		command.RemoveAll(opt)
 	}, func() {})
+
+	var pOpt = option.New
+	if subjectPrefix != "" {
+		var modifiers []option.Modifier
+		if subjectEnv != nil {
+			modifiers = append(modifiers, option.Env(subjectEnv))
+		}
+		pOpt = util.WrappedOption([]string{subjectPrefix}, modifiers...)
+	}
 
 	const description = "Finch Daemon Functional test"
 	ginkgo.Describe(description, func() {
@@ -57,7 +75,7 @@ func TestRun(t *testing.T) {
 		tests.VolumeRemove(opt)
 
 		// functional test for network APIs
-		tests.NetworkCreate(opt)
+		tests.NetworkCreate(opt, pOpt)
 		tests.NetworkRemove(opt)
 		tests.NetworkList(opt)
 		tests.NetworkInspect(opt)
