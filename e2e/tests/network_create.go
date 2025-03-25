@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/coreos/go-iptables/iptables"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
@@ -202,9 +203,11 @@ func NetworkCreate(opt *option.Option) {
 				Expect(stdout).To(ContainSubstring(`"finch.network.bridge.enable_icc.ipv4": "false"`))
 
 				// check iptables rules exists
-				iptOpt, _ := option.New([]string{"iptables"})
-				command.Run(iptOpt, "-C", "FINCH-ISOLATE-CHAIN",
-					"-i", testBridge, "-o", testBridge, "-j", "DROP")
+				ipt, err := iptables.New()
+				Expect(err).ShouldNot(HaveOccurred())
+				exists, err := ipt.Exists("FINCH-ISOLATE-CHAIN", "-i", testBridge, "-o", testBridge, "-j", "DROP")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(exists).Should(BeTrue())
 			})
 		})
 
@@ -226,9 +229,11 @@ func NetworkCreate(opt *option.Option) {
 				Expect(stdout).ShouldNot(ContainSubstring(`"finch.network.bridge.enable_icc.ipv4"`))
 
 				// check iptables rules does not exist
-				iptOpt, _ := option.New([]string{"iptables"})
-				command.RunWithoutSuccessfulExit(iptOpt, "-C", "FINCH-ISOLATE-CHAIN",
-					"-i", testBridge, "-o", testBridge, "-j", "DROP")
+				ipt, err := iptables.New()
+				Expect(err).ShouldNot(HaveOccurred())
+				exists, err := ipt.Exists("FINCH-ISOLATE-CHAIN", "-i", testBridge, "-o", testBridge, "-j", "DROP")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(exists).Should(BeFalse())
 			})
 		})
 	})
