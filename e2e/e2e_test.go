@@ -6,6 +6,7 @@ package e2e
 import (
 	"flag"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/onsi/ginkgo/v2"
@@ -30,8 +31,8 @@ func TestRun(t *testing.T) {
 	var subjectPrefix string
 	var subjectEnv []string
 	pflag.StringVar(&subject, "subject", "nerdctl", `A string which specifies which command the tests are run against, defaults to "nerdctl" in the user's PATH.`)
-	pflag.StringVar(&subjectPrefix, "subject-prefix", "", `A string which prefixes the command the tests are run against, defaults to "".`)
-	pflag.StringArrayVar(&subjectEnv, "subject-env", []string{}, "One or more environment variables to set when running the subject, in the form of strings like EXAMPLE=test")
+	pflag.StringVar(&subjectPrefix, "daemon-context-subject-prefix", "", `A string which prefixes the command the tests are run against, defaults to "". This string will be split by spaces.`)
+	pflag.StringArrayVar(&subjectEnv, "daemon-context-subject-env", []string{}, "One or more environment variables to set when running the subject, in the form of strings like EXAMPLE=test")
 	pflag.Parse()
 
 	opt, _ := option.New([]string{subject, "--namespace", "finch"})
@@ -53,7 +54,7 @@ func TestRun(t *testing.T) {
 		if subjectEnv != nil {
 			modifiers = append(modifiers, option.Env(subjectEnv))
 		}
-		pOpt = util.WrappedOption([]string{subjectPrefix}, modifiers...)
+		pOpt = util.WrappedOption(strings.Split(subjectPrefix, " "), modifiers...)
 	}
 
 	const description = "Finch Daemon Functional test"
