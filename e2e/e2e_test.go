@@ -4,6 +4,8 @@
 package e2e
 
 import (
+	"flag"
+	"log"
 	"os"
 	"strings"
 	"testing"
@@ -26,6 +28,11 @@ var subjectEnv = pflag.StringArray("daemon-context-subject-env", []string{}, "On
 func TestRun(t *testing.T) {
 	if os.Getenv("TEST_E2E") != "1" {
 		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run these tests")
+	}
+
+	if err := parseTestFlags(); err != nil {
+		log.Println("failed to parse go test flags", err)
+		os.Exit(1)
 	}
 
 	pflag.Parse()
@@ -95,4 +102,18 @@ func TestRun(t *testing.T) {
 
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	ginkgo.RunSpecs(t, description)
+}
+
+// parseTestFlags parses go test flags because pflag package ignores flags with '-test.' prefix
+// Related issues:
+// https://github.com/spf13/pflag/issues/63
+// https://github.com/spf13/pflag/issues/238
+func parseTestFlags() error {
+	var testFlags []string
+	for _, f := range os.Args[1:] {
+		if strings.HasPrefix(f, "-test.") {
+			testFlags = append(testFlags, f)
+		}
+	}
+	return flag.CommandLine.Parse(testFlags)
 }
