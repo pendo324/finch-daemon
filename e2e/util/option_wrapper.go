@@ -3,8 +3,6 @@
 package util
 
 import (
-	"slices"
-
 	"github.com/runfinch/common-tests/option"
 )
 
@@ -14,9 +12,9 @@ type NewOpt func(subject []string, modifiers ...option.Modifier) (*option.Option
 // WrappedOption allows injection of new prefixed option creator function into tests.
 // This is useful for scenarios where CLI commands must be run in an environment which is
 // not the same as the system running the tests, like inside a SSH shell.
-func WrappedOption(prefix []string, modifiers ...option.Modifier) NewOpt {
+func WrappedOption(prefix []string, wModifiers ...option.Modifier) NewOpt {
 	return func(subject []string, modifiers ...option.Modifier) (*option.Option, error) {
-		prefix = slices.Concat(prefix, subject)
-		return option.New(prefix, modifiers...)
+		prefix = append(prefix, subject...)
+		return option.New(prefix, append(wModifiers, modifiers...)...)
 	}
 }
