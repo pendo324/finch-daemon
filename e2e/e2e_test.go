@@ -14,16 +14,15 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
-	"github.com/spf13/pflag"
 
 	"github.com/runfinch/finch-daemon/e2e/tests"
 	"github.com/runfinch/finch-daemon/e2e/util"
 )
 
 // Subject defines which CLI the tests are run against, defaults to \"nerdctl\" in the user's PATH.
-var subject = pflag.String("subject", "nerdctl", `which CLI the tests are run against, defaults to "nerdctl" in the user's PATH.`)
-var subjectPrefix = pflag.String("daemon-context-subject-prefix", "", `A string which prefixes the command the tests are run against, defaults to "". This string will be split by spaces.`)
-var subjectEnv = pflag.StringArray("daemon-context-subject-env", []string{}, "One or more environment variables to set when running the subject, in the form of strings like EXAMPLE=test")
+var Subject = flag.String("subject", "nerdctl", `which CLI the tests are run against, defaults to "nerdctl" in the user's PATH.`)
+var SubjectPrefix = flag.String("daemon-context-subject-prefix", "", `A string which prefixes the command the tests are run against, defaults to "". This string will be split by spaces.`)
+var PrefixedSubjectEnv = flag.String("daemon-context-subject-env", "", `Environment to add when running a prefixed subject, in the form of a string like "EXAMPLE=foo EXAMPLE2=bar"`)
 
 func TestRun(t *testing.T) {
 	if os.Getenv("TEST_E2E") != "1" {
@@ -35,9 +34,7 @@ func TestRun(t *testing.T) {
 		os.Exit(1)
 	}
 
-	pflag.Parse()
-
-	opt, _ := option.New([]string{*subject, "--namespace", "finch"})
+	opt, _ := option.New([]string{*Subject, "--namespace", "finch"})
 
 	ginkgo.SynchronizedBeforeSuite(func() []byte {
 		tests.SetupLocalRegistry(opt)
@@ -51,12 +48,12 @@ func TestRun(t *testing.T) {
 	}, func() {})
 
 	var pOpt = option.New
-	if *subjectPrefix != "" {
+	if *SubjectPrefix != "" {
 		var modifiers []option.Modifier
-		if subjectEnv != nil {
-			modifiers = append(modifiers, option.Env(*subjectEnv))
+		if *PrefixedSubjectEnv != "" {
+			modifiers = append(modifiers, option.Env(strings.Split(*PrefixedSubjectEnv, " ")))
 		}
-		pOpt = util.WrappedOption(strings.Split(*subjectPrefix, " "), modifiers...)
+		pOpt = util.WrappedOption(strings.Split(*SubjectPrefix, " "), modifiers...)
 	}
 
 	const description = "Finch Daemon Functional test"
